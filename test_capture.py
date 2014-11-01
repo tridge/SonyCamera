@@ -81,6 +81,35 @@ def take_photo(filename):
         return True
     return False
 
+def show_information():
+    '''show various bits of camera information'''
+    print(show_version())
+    print(get_available_shutter_speeds())
+    print(simple_call("getShutterSpeed"))
+    print(simple_call("getAvailableShutterSpeed"))
+    print(simple_call("getAvailableApiList"))
+    print(simple_call("getSupportedExposureMode"))
+    print(simple_call("getAvailableExposureMode"))
+    print(simple_call("getAvailableCameraFunction"))
+    print(simple_call("getAvailableShootMode"))
+    print(simple_call("getStorageInformation"))
+    print(simple_call("getAvailableExposureMode"))
+    print(simple_call("getExposureMode"))
+    print(simple_call("setExposureMode", params=['Program Auto']))
+    print(simple_call("getExposureMode"))
+    print(simple_call("getAvailableShutterSpeed"))
+    print(simple_call("getSupportedShutterSpeed"))
+    print(simple_call("getSupportedStillSize"))
+    print(simple_call("getAvailableStillSize"))
+    print(simple_call("getSupportedExposureCompensation"))
+    print(simple_call("getSupportedWhiteBalance"))
+    print(simple_call("getWhiteBalance"))
+    print(simple_call("getApplicationInfo"))
+    print(simple_call("getVersions"))
+    print(simple_call("getSupportedSelfTimer"))
+    print(simple_call("getSupportedPostviewImageSize"))
+    print(simple_call("getSupportedBeepMode"))
+
 def frame_time(t):
     '''return a time string for a filename with 0.01 sec resolution'''
     # round to the nearest 100th of a second
@@ -96,26 +125,10 @@ def continuous_capture():
             print(filename)
 
 enable_methods()
-print(show_version())
-print(get_available_shutter_speeds())
-print(set_shutter_speed("1/2"))
-print(simple_call("getShutterSpeed"))
-print(simple_call("getAvailableShutterSpeed"))
-print(simple_call("getAvailableApiList"))
-print(simple_call("getSupportedExposureMode"))
-print(simple_call("getAvailableExposureMode"))
-print(simple_call("getAvailableCameraFunction"))
-print(simple_call("getAvailableShootMode"))
-print(simple_call("getStorageInformation"))
-print(simple_call("getAvailableExposureMode"))
-print(simple_call("getExposureMode"))
 print(simple_call("setExposureMode", params=['Program Auto']))
-print(simple_call("getExposureMode"))
-print(simple_call("getAvailableShutterSpeed"))
-print(simple_call("getSupportedShutterSpeed"))
-print(simple_call("getSupportedStillSize"))
-print(simple_call("getAvailableStillSize"))
 print(simple_call("setStillSize", params=['4:3', '18M']))
+print(simple_call("setPostviewImageSize", params=['Original']))
+show_information()
 
 try:
     continuous_capture()
