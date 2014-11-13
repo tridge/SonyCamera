@@ -110,6 +110,23 @@ def show_information():
     print(simple_call("getSupportedPostviewImageSize"))
     print(simple_call("getSupportedBeepMode"))
 
+def set_highest_still_size():
+    '''setup highest possible still size'''
+    available = simple_call("getSupportedStillSize")
+    best = None
+    best_size = 0
+    for s in available['result'][0]:
+        size = s['size']
+        if size[-1] != 'M':
+            continue
+        size = int(size[:-1])
+        if size > best_size:
+            best = s
+            best_size = size
+    if best is not None:
+        print("Chose still size ", best)
+    print(simple_call("setStillSize", params=[best['aspect'], best['size']]))
+
 def frame_time(t):
     '''return a time string for a filename with 0.01 sec resolution'''
     # round to the nearest 100th of a second
@@ -126,7 +143,7 @@ def continuous_capture():
 
 enable_methods()
 print(simple_call("setExposureMode", params=['Program Auto']))
-print(simple_call("setStillSize", params=['4:3', '18M']))
+set_highest_still_size()
 print(simple_call("setPostviewImageSize", params=['Original']))
 show_information()
 
