@@ -6,18 +6,52 @@ Started by Andrew Tridgell October 2014
 Released under GNU GPLv3 or later
 '''
 
-import requests, json, time, sys
+import requests, json, time, sys, socket
+import xml.etree.ElementTree as ET
 from optparse import OptionParser
 
 # parse command line options
 parser = OptionParser()
-parser.add_option("--camera", help="camera IP", default="http://10.0.0.1:10000")
+parser.add_option("--camera", help="camera IP", default="http://")
 
 (opts, args) = parser.parse_args()
 
+# SSDP 
+
+def find_camera():
+    '''Send an SSDP request to get the camera URL'''
+    SSDP_ADDR = "239.255.255.250";
+    SSDP_PORT = 1900;
+    SSDP_MX = 1;
+    SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1";
+    ssdpRequest = "M-SEARCH * HTTP/1.1\r\n" + \
+                    "HOST: %s:%d\r\n" % (SSDP_ADDR, SSDP_PORT) + \
+                    "MAN: \"ssdp:discover\"\r\n" + \
+                    "MX: %d\r\n" % (SSDP_MX, ) + \
+                    "ST: %s\r\n" % (SSDP_ST, ) + "\r\n";
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.sendto(ssdpRequest, (SSDP_ADDR, SSDP_PORT))
+    result = sock.recv(1000)
+    print (result)
+
+    start = result.find("LOCATION: ") + 10
+    end = result.find("xml", start) + 3
+    xmlUrl = result[start:end]
+
+    deviceDescription = requests.request('GET', xmlUrl)
+    open("cameraDescription.xml", 'w').write(deviceDescription.content)
+
+    tree = ET.ElementTree(file='cameraDescription.xml')
+    
+    for elem in tree.iter():
+        if elem.tag == '{urn:schemas-sony-com:av}X_ScalarWebAPI_ActionList_URL':
+            opts.camera = elem.text
+    print opts.camera
+
 def make_call(service, payload):
     '''make a call to camera'''
-    url = "%s/sony/%s" % (opts.camera, service)
+    url = "%s/%s" % (opts.camera, service)
     headers = {"content-type": "application/json"}
     data = json.dumps(payload)
     response = requests.post(url,
@@ -119,7 +153,7 @@ def set_highest_still_size():
         size = s['size']
         if size[-1] != 'M':
             continue
-        size = int(size[:-1])
+        size = float(size[:-1])
         if size > best_size:
             best = s
             best_size = size
@@ -141,7 +175,9 @@ def continuous_capture():
         if take_photo(filename):
             print(filename)
 
-enable_methods()
+find_camera()
+simple_call("echo", params=["Hello Camera API"])
+'''enable_methods()'''
 print(simple_call("setExposureMode", params=['Program Auto']))
 set_highest_still_size()
 print(simple_call("setPostviewImageSize", params=['Original']))
