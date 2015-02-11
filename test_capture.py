@@ -6,52 +6,41 @@ Started by Andrew Tridgell October 2014
 Released under GNU GPLv3 or later
 '''
 
-import requests, json, time, sys, socket
+import requests, json, time, sys, socket, StringIO
 import xml.etree.ElementTree as ET
 from optparse import OptionParser
 
 # parse command line options
 parser = OptionParser()
-parser.add_option("--camera", help="camera IP", default="http://")
+parser.add_option("--camera", help="camera URL (or 'SSDP' for auto-discovery)", default="SSDP")
+parser.add_option("--iface", default=None, help="network interface IP")
 
 (opts, args) = parser.parse_args()
 
-# SSDP 
-
+camera_url = opts.camera
+    
 def find_camera():
     '''Send an SSDP request to get the camera URL'''
-    SSDP_ADDR = "239.255.255.250";
-    SSDP_PORT = 1900;
-    SSDP_MX = 1;
+    import ssdp
     SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1";
-    ssdpRequest = "M-SEARCH * HTTP/1.1\r\n" + \
-                    "HOST: %s:%d\r\n" % (SSDP_ADDR, SSDP_PORT) + \
-                    "MAN: \"ssdp:discover\"\r\n" + \
-                    "MX: %d\r\n" % (SSDP_MX, ) + \
-                    "ST: %s\r\n" % (SSDP_ST, ) + "\r\n";
+    ret = ssdp.discover(SSDP_ST, if_ip=opts.iface)
+    if len(ret) == 0:
+        return None
+    dms_location = ret[0].location
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto(ssdpRequest, (SSDP_ADDR, SSDP_PORT))
-    result = sock.recv(1000)
-    print (result)
+    print("Fetching DMS from %s" % dms_location)    
+    req = requests.request('GET', dms_location)
 
-    start = result.find("LOCATION: ") + 10
-    end = result.find("xml", start) + 3
-    xmlUrl = result[start:end]
-
-    deviceDescription = requests.request('GET', xmlUrl)
-    open("cameraDescription.xml", 'w').write(deviceDescription.content)
-
-    tree = ET.ElementTree(file='cameraDescription.xml')
-    
+    tree = ET.ElementTree(file=StringIO.StringIO(req.content))
     for elem in tree.iter():
         if elem.tag == '{urn:schemas-sony-com:av}X_ScalarWebAPI_ActionList_URL':
-            opts.camera = elem.text
-    print opts.camera
+            print("Found camera at %s" % elem.text)
+            return elem.text
+    return None
 
 def make_call(service, payload):
     '''make a call to camera'''
-    url = "%s/%s" % (opts.camera, service)
+    url = "%s/%s" % (camera_url, service)
     headers = {"content-type": "application/json"}
     data = json.dumps(payload)
     response = requests.post(url,
@@ -175,9 +164,14 @@ def continuous_capture():
         if take_photo(filename):
             print(filename)
 
-find_camera()
+if camera_url.upper() == 'SSDP':
+    camera_url = find_camera()
+    if camera_url is None:
+        print("No camera found")
+        sys.exit(1)
+
 simple_call("echo", params=["Hello Camera API"])
-'''enable_methods()'''
+enable_methods()
 print(simple_call("setExposureMode", params=['Program Auto']))
 set_highest_still_size()
 print(simple_call("setPostviewImageSize", params=['Original']))
